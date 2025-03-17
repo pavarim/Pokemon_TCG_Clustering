@@ -1,0 +1,67 @@
+```{r}
+library(httr)
+library(jsonlite)
+library(tidyverse)
+library(mixer)
+```
+
+```{r}
+install.packages("mixer_1.9.tar.gz", repos=NULL, source=TRUE)
+```
+
+
+```{r}
+url = "https://api.pokemontcg.io/v2/cards"
+url = paste0(url, "?q=set.name:", URLencode("XY"))
+
+
+get_pokemon_cards = function(query_params = list()){
+  response = GET(url, query = query_params)
+  if (status_code(response) == 200){
+    content(response, "text") %>% fromJSON(flatten = TRUE)
+  } else {
+    stop("Failed to retrieve data")
+  }
+}
+```
+
+```{r}
+x = get_pokemon_cards()
+y = x$data %>% select(c(name,hp,types)) %>% na.omit() %>% distinct() %>% select(-hp)
+```
+
+```{r}
+
+
+criar_matriz = function(dados) {
+  n = nrow(dados)
+  matriz = matrix(0, n, n ,dimnames = list(dados$name, dados$name))
+  
+  for (i in 1:n){
+    for (j in 1:n){
+      if (i != j) {
+        if (dados$types[i] == dados$types[j]){
+          matriz[i,j] = 1
+        } else{
+          matriz[i,j] = 0
+        }
+      }
+    }
+  }
+  return(matriz)
+}
+```
+
+
+```{r}
+y$types = as.character(y$types)
+matriz = criar_matriz(y)
+```
+
+```{r}
+fitb <- mixer(matriz, qmin = 1, qmax = 12, method = "variational")
+```
+```{r}
+mod = getModel(fitb)
+```
+
